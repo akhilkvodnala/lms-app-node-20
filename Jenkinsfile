@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE_SERVER = 'lms'
+        SONARQUBE_SERVER = 'lms' // Name of the SonarQube configuration in Jenkins
     }
 
     stages {
@@ -15,7 +15,10 @@ pipeline {
         stage('Code Scan - SonarQube') {
             steps {
                 withSonarQubeEnv(SONARQUBE_SERVER) {
-                    sh 'sonar-scanner -Dsonar.projectKey=lms -Dsonar.sources=.'
+                    script {
+                        def scannerHome = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=lms -Dsonar.sources=."
+                    }
                 }
             }
         }
@@ -27,4 +30,3 @@ pipeline {
         }
     }
 }
-
