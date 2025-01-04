@@ -2,7 +2,9 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE_SERVER = 'lms' // Name of the SonarQube configuration in Jenkins
+        SONARQUBE_SERVER = 'lms'  // Name of the SonarQube configuration in Jenkins
+        FRONTEND_IMAGE = "akhilvodnala/frontend:latest"  // Replace with your Docker Hub username or registry
+        BACKEND_IMAGE = "akhilvodnala/backend:latest"    // Replace with your Docker Hub username or registry
     }
 
     stages {
@@ -25,7 +27,13 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                echo 'Building Docker images...'
+                script {
+                    // Build the frontend Docker image from the webapp directory
+                    sh "docker build -t ${FRONTEND_IMAGE} ./webapp"
+
+                    // Build the backend Docker image from the api directory
+                    sh "docker build -t ${BACKEND_IMAGE} ./api"
+                }
             }
         }
     }
