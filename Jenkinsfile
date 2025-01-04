@@ -36,5 +36,18 @@ pipeline {
                 }
             }
         }
+
+        stage('Scan Docker Images with Trivy') {
+            steps {
+                script {
+                    // Run Trivy scan for frontend and backend images
+                    sh """
+                    trivy image --no-progress --exit-code 1 ${FRONTEND_IMAGE}
+                    trivy image --no-progress --exit-code 1 ${BACKEND_IMAGE}
+                    """
+                }
+            }
+        }
     }
 }
+
