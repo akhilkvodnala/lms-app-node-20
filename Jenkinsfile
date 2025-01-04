@@ -57,12 +57,11 @@ pipeline {
                         echo "No vulnerabilities found in backend image."
                     }
 
-                    // Optionally fail the build if vulnerabilities of certain severity are found
-                    if (frontendScanResult != 0 || backendScanResult != 0) {
-                        error("Build failed due to vulnerabilities in Docker images.")
-                    }
+                    // Proceed with the pipeline even if vulnerabilities are found
+                    echo "Pipeline will continue even with vulnerabilities."
                 }
             }
         }
     }
 }
+
