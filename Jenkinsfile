@@ -41,13 +41,28 @@ pipeline {
             steps {
                 script {
                     // Run Trivy scan for frontend and backend images
-                    sh """
-                    trivy image --no-progress --exit-code 1 ${FRONTEND_IMAGE}
-                    trivy image --no-progress --exit-code 1 ${BACKEND_IMAGE}
-                    """
+                    def frontendScanResult = sh(script: "trivy image --no-progress --exit-code 1 ${FRONTEND_IMAGE}", returnStatus: true)
+                    def backendScanResult = sh(script: "trivy image --no-progress --exit-code 1 ${BACKEND_IMAGE}", returnStatus: true)
+
+                    // Check if any vulnerabilities were found (exit code 1) and log accordingly
+                    if (frontendScanResult == 1) {
+                        echo "Vulnerabilities found in frontend image."
+                    } else {
+                        echo "No vulnerabilities found in frontend image."
+                    }
+
+                    if (backendScanResult == 1) {
+                        echo "Vulnerabilities found in backend image."
+                    } else {
+                        echo "No vulnerabilities found in backend image."
+                    }
+
+                    // Optionally fail the build if vulnerabilities of certain severity are found
+                    if (frontendScanResult != 0 || backendScanResult != 0) {
+                        error("Build failed due to vulnerabilities in Docker images.")
+                    }
                 }
             }
         }
     }
 }
-
