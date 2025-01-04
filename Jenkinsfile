@@ -5,6 +5,10 @@ pipeline {
         SONARQUBE_SERVER = 'lms'  // Name of the SonarQube configuration in Jenkins
         FRONTEND_IMAGE = "akhilvodnala/frontend:latest"  // Replace with your Docker Hub username or registry
         BACKEND_IMAGE = "akhilvodnala/backend:latest"    // Replace with your Docker Hub username or registry
+        AWS_REGION = "us-east-1"  // Replace with your AWS region
+        ECR_REPO = "982534383314.dkr.ecr.us-east-1.amazonaws.com"  // Replace with your AWS ECR repo
+        FRONTEND_ECR_IMAGE = "${ECR_REPO}/frontend:latest"
+        BACKEND_ECR_IMAGE = "${ECR_REPO}/backend:latest"
     }
 
     stages {
@@ -62,6 +66,17 @@ pipeline {
                 }
             }
         }
+
+        stage('Push to AWS ECR') {
+            steps {
+                sh '''
+                aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
+                docker tag ${FRONTEND_IMAGE} ${FRONTEND_ECR_IMAGE}
+                docker tag ${BACKEND_IMAGE} ${BACKEND_ECR_IMAGE}
+                docker push ${FRONTEND_ECR_IMAGE}
+                docker push ${BACKEND_ECR_IMAGE}
+                '''
+            }
+        }
     }
 }
-
