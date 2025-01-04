@@ -5,10 +5,10 @@ pipeline {
         SONARQUBE_SERVER = 'lms'  // Name of the SonarQube configuration in Jenkins
         FRONTEND_IMAGE = "akhilvodnala/frontend:latest"  // Replace with your Docker Hub username or registry
         BACKEND_IMAGE = "akhilvodnala/backend:latest"    // Replace with your Docker Hub username or registry
-        AWS_REGION = "us-east-1"  // Replace with your AWS region
-        ECR_REPO = "982534383314.dkr.ecr.us-east-1.amazonaws.com"  // Replace with your AWS ECR repo
-        FRONTEND_ECR_IMAGE = "${ECR_REPO}/frontend:latest"
-        BACKEND_ECR_IMAGE = "${ECR_REPO}/backend:latest"
+        AWS_REGION = "us-east-1"  // AWS region for ECR
+        ECR_REPO = "982534383314.dkr.ecr.us-east-1.amazonaws.com"  // Replace with your ECR repository URL
+        FRONTEND_ECR_IMAGE = "${ECR_REPO}/frontend:latest"  // Frontend ECR image
+        BACKEND_ECR_IMAGE = "${ECR_REPO}/backend:latest"    // Backend ECR image
     }
 
     stages {
@@ -32,10 +32,7 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    // Build the frontend Docker image from the webapp directory
                     sh "docker build -t ${FRONTEND_IMAGE} ./webapp"
-
-                    // Build the backend Docker image from the api directory
                     sh "docker build -t ${BACKEND_IMAGE} ./api"
                 }
             }
@@ -44,11 +41,9 @@ pipeline {
         stage('Scan Docker Images with Trivy') {
             steps {
                 script {
-                    // Run Trivy scan for frontend and backend images
                     def frontendScanResult = sh(script: "trivy image --no-progress --exit-code 1 ${FRONTEND_IMAGE}", returnStatus: true)
                     def backendScanResult = sh(script: "trivy image --no-progress --exit-code 1 ${BACKEND_IMAGE}", returnStatus: true)
 
-                    // Check if any vulnerabilities were found (exit code 1) and log accordingly
                     if (frontendScanResult == 1) {
                         echo "Vulnerabilities found in frontend image."
                     } else {
@@ -61,7 +56,6 @@ pipeline {
                         echo "No vulnerabilities found in backend image."
                     }
 
-                    // Proceed with the pipeline even if vulnerabilities are found
                     echo "Pipeline will continue even with vulnerabilities."
                 }
             }
@@ -69,13 +63,17 @@ pipeline {
 
         stage('Push to AWS ECR') {
             steps {
-                sh '''
-                aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
-                docker tag ${FRONTEND_IMAGE} ${FRONTEND_ECR_IMAGE}
-                docker tag ${BACKEND_IMAGE} ${BACKEND_ECR_IMAGE}
-                docker push ${FRONTEND_ECR_IMAGE}
-                docker push ${BACKEND_ECR_IMAGE}
-                '''
+                withCredentials([usernamePassword(credentialsId: 'aws-credentials-id', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh '''
+                    aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+                    aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
+                    docker tag ${FRONTEND_IMAGE} ${FRONTEND_ECR_IMAGE}
+                    docker tag ${BACKEND_IMAGE} ${BACKEND_ECR_IMAGE}
+                    docker push ${FRONTEND_ECR_IMAGE}
+                    docker push ${BACKEND_ECR_IMAGE}
+                    '''
+                }
             }
         }
     }
