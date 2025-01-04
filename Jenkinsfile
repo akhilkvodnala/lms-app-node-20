@@ -1,15 +1,28 @@
 pipeline {
     agent any
 
+    environment {
+        SONARQUBE_SERVER = 'SonarQube'
+    }
+
     stages {
         stage('Checkout Code') {
             steps {
                 git branch: 'main', url: 'https://akhilkvodnala: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@github.com/akhilkvodnala/lms-app-node-20.git'
             }
         }
-        stage('Build Placeholder') {
+
+        stage('Code Scan - SonarQube') {
             steps {
-                echo 'Code checkout successful!'
+                withSonarQubeEnv(SONARQUBE_SERVER) {
+                    sh 'sonar-scanner -Dsonar.projectKey=lms -Dsonar.sources=.'
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                echo 'Building Docker images...'
             }
         }
     }
