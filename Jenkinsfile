@@ -3,18 +3,19 @@ pipeline {
 
     environment {
         SONARQUBE_SERVER = 'lms'  // Name of the SonarQube configuration in Jenkins
-        FRONTEND_IMAGE = "akhilvodnala/frontend:latest"  // Replace with your Docker Hub username or registry
-        BACKEND_IMAGE = "akhilvodnala/backend:latest"    // Replace with your Docker Hub username or registry
+        FRONTEND_IMAGE = "frontend:latest"  // Local tag for frontend Docker image
+        BACKEND_IMAGE = "backend:latest"   // Local tag for backend Docker image
         AWS_REGION = 'us-east-1' // AWS Region
         ECR_REPO = '982534383314.dkr.ecr.us-east-1.amazonaws.com' // AWS ECR repository URL
         FRONTEND_ECR_IMAGE = "${ECR_REPO}/frontend:latest" // ECR URL for frontend image
         BACKEND_ECR_IMAGE = "${ECR_REPO}/backend:latest" // ECR URL for backend image
+        KUBE_CONFIG = '/path/to/kubeconfig' // Ensure the Kubernetes config is available
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://akhilkvodnala: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@github.com/akhilkvodnala/lms-app-node-20.git'
+                git branch: 'main', url: 'https://github.com/akhilkvodnala/lms-app-node-20.git'
             }
         }
 
@@ -69,16 +70,49 @@ pipeline {
 
         stage('Push to AWS ECR') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'aws secret access key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh '''
-                    aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-                    aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}
-                    docker tag ${FRONTEND_IMAGE} ${FRONTEND_ECR_IMAGE}
-                    docker tag ${BACKEND_IMAGE} ${BACKEND_ECR_IMAGE}
-                    docker push ${FRONTEND_ECR_IMAGE}
-                    docker push ${BACKEND_ECR_IMAGE}
-                    '''
+                withCredentials([usernamePassword(credentialsId: 'aws-secret-access-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    script {
+                        // Configure AWS CLI with the credentials
+                        sh '''
+                        aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+                        aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+                        aws configure set region ${AWS_REGION}
+                        '''
+
+                        // Login to AWS ECR
+                        sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REPO}"
+
+                        // Tag the frontend image
+                        sh "docker tag ${FRONTEND_IMAGE} ${FRONTEND_ECR_IMAGE}"
+
+                        // Tag the backend image
+                        sh "docker tag ${BACKEND_IMAGE} ${BACKEND_ECR_IMAGE}"
+
+                        // Push the frontend image to ECR
+                        sh "docker push ${FRONTEND_ECR_IMAGE}"
+
+                        // Push the backend image to ECR
+                        sh "docker push ${BACKEND_ECR_IMAGE}"
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBE_CONFIG')]) {
+                    script {
+                        // Apply Kubernetes manifests
+                        sh '''
+                        kubectl --kubeconfig=${KUBE_CONFIG} apply -f k8s/be-configmap.yml
+                        kubectl --kubeconfig=${KUBE_CONFIG} apply -f k8s/be-deployment.yml
+                        kubectl --kubeconfig=${KUBE_CONFIG} apply -f k8s/be-service.yml
+                        kubectl --kubeconfig=${KUBE_CONFIG} apply -f k8s/fe-deployment.yml
+                        kubectl --kubeconfig=${KUBE_CONFIG} apply -f k8s/fe-servicefile.yml
+                        kubectl --kubeconfig=${KUBE_CONFIG} apply -f k8s/secrets.yml
+                        kubectl --kubeconfig=${KUBE_CONFIG} apply -f k8s/service-account.yml
+                        '''
+                    }
                 }
             }
         }
