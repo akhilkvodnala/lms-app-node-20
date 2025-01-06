@@ -70,7 +70,7 @@ pipeline {
 
         stage('Push to AWS ECR') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'aws-secret-access-key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                withCredentials([usernamePassword(credentialsId: 'aws secret access key', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     script {
                         // Configure AWS CLI with the credentials
                         sh '''
