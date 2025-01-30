@@ -16,7 +16,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 script {
-                    def projects = ['frontend', 'backend']
+                    def projects = ['api', 'webapp']
                     projects.each { project ->
                         withSonarQubeEnv('SonarQube') {
                             sh "${SONAR_SCANNER} -Dsonar.projectKey=${project} -Dsonar.sources=${project}"
