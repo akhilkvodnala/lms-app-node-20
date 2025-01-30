@@ -9,25 +9,18 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/akhilkvodnala/lms-app-node-20.git'
+                git branch: 'main', credentialsId: 'githublogin', url: 'https://github.com/akhilkvodnala/lms-app-node-20.git'
             }
         }
 
-        stage('SonarQube Analysis - Frontend') {
+        stage('SonarQube Analysis') {
             steps {
                 script {
-                    withSonarQubeEnv('SonarQube') {
-                        sh "${SONAR_SCANNER} -Dsonar.projectKey=frontend -Dsonar.sources=frontend"
-                    }
-                }
-            }
-        }
-
-        stage('SonarQube Analysis - Backend') {
-            steps {
-                script {
-                    withSonarQubeEnv('SonarQube') {
-                        sh "${SONAR_SCANNER} -Dsonar.projectKey=backend -Dsonar.sources=backend"
+                    def projects = ['frontend', 'backend']
+                    projects.each { project ->
+                        withSonarQubeEnv('SonarQube') {
+                            sh "${SONAR_SCANNER} -Dsonar.projectKey=${project} -Dsonar.sources=${project}"
+                        }
                     }
                 }
             }
@@ -50,19 +43,13 @@ pipeline {
     post {
         success {
             emailext subject: 'SonarQube Analysis Passed',
-                     body: 'Frontend and Backend SonarQube analysis passed! erripukks',
-                     to: 'akhilkvodnala@gmail.com','shahidafrid366@gmail.com','machirajuraghavarao@gmail.com'
-
-            slackSend channel: '#devops-alerts',
-                      message: '✅ SonarQube analysis passed! Frontend and Backend are clean.'
+                     body: 'Frontend and Backend SonarQube analysis passed!',
+                     to: 'akhilkvodnala@gmail.com,shahidafrid366@gmail.com,machirajuraghavarao@gmail.com'
         }
         failure {
             emailext subject: 'SonarQube Analysis Failed',
                      body: 'SonarQube analysis failed. Check Jenkins for details.',
                      to: 'akhilkvodnala@gmail.com'
-
-            slackSend channel: '#devops-alerts',
-                      message: '❌ SonarQube analysis failed! Check Jenkins for details.'
         }
     }
 }
