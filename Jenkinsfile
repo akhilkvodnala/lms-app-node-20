@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         SONARQUBE_SERVER = 'SonarQube'  // Must match the name in Jenkins settings
-        SONAR_SCANNER = 'SonarScanner'  // Must match the tool name in Jenkins
+        SONAR_SCANNER = '/opt/sonar-scanner/bin/sonar-scanner'  // Define the correct path
     }
 
     stages {
@@ -18,8 +18,12 @@ pipeline {
                 script {
                     def projects = ['api', 'webapp']
                     projects.each { project ->
-                        withSonarQubeEnv('SonarQube') {
-                            sh "${SONAR_SCANNER} -Dsonar.projectKey=${project} -Dsonar.sources=${project}"
+                        if (fileExists("${project}")) {  // Check if the directory exists
+                            withSonarQubeEnv('SonarQube') {
+                                sh "${SONAR_SCANNER} -Dsonar.projectKey=${project} -Dsonar.sources=${project}"
+                            }
+                        } else {
+                            echo "Skipping ${project}, directory does not exist"
                         }
                     }
                 }
@@ -42,14 +46,18 @@ pipeline {
 
     post {
         success {
-            emailext subject: 'SonarQube Analysis Passed',
-                     body: 'Frontend and Backend SonarQube analysis passed!',
-                     to: 'akhilkvodnala@gmail.com,shahidafrid366@gmail.com,machirajuraghavarao@gmail.com'
+            emailext(
+                subject: 'SonarQube Analysis Passed',
+                body: 'Frontend and Backend SonarQube analysis passed!',
+                to: ['akhilkvodnala@gmail.com', 'shahidafrid366@gmail.com', 'machirajuraghavarao@gmail.com']
+            )
         }
         failure {
-            emailext subject: 'SonarQube Analysis Failed',
-                     body: 'SonarQube analysis failed. Check Jenkins for details.',
-                     to: 'akhilkvodnala@gmail.com'
+            emailext(
+                subject: 'SonarQube Analysis Failed',
+                body: 'SonarQube analysis failed. Check Jenkins for details.',
+                to: ['akhilkvodnala@gmail.com']
+            )
         }
     }
 }
