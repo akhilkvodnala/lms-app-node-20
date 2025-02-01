@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: lms-backend
-        image: 982534383314.dkr.ecr.us-east-1.amazonaws.com/lmsecr:backend
+        image: 982534383314.dkr.ecr.us-east-1.amazonaws.com/backend:latest
         ports:
         - containerPort: 3000
         envFrom:
